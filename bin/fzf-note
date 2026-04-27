@@ -125,13 +125,13 @@ cmd_search() {
     local q_out
     q_out=$(printf '%q' "$tmp_out")
 
-    tmux display-popup -E "bash -lc 'nl -ba $q_note | fzf --ansi --layout=reverse --preview-window=down,60% --preview $q_preview > $q_out'" || true
+    tmux display-popup -E "bash -lc 'nl -ba $q_note | awk -F'\''\t'\'' '\''\$2 ~ /[^[:space:]]/'\'' | fzf --ansi --layout=reverse --preview-window=down,60% --preview $q_preview > $q_out'" || true
 
     if [[ -s "$tmp_out" ]]; then
       selection="$(cat "$tmp_out")"
     fi
   else
-    selection="$({ nl -ba "$NOTE_FILE" | fzf --ansi --layout=reverse --preview-window=down,60% --preview "$preview"; } || true)"
+    selection="$({ nl -ba "$NOTE_FILE" | awk -F'\t' '$2 ~ /[^[:space:]]/' | fzf --ansi --layout=reverse --preview-window=down,60% --preview "$preview"; } || true)"
   fi
 
   open_in_vim_from_selection "$selection"
