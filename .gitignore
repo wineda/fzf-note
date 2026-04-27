@@ -1,0 +1,6 @@
+# editor
+.DS_Store
+*.swp
+
+# optional runtime tmp
+.tmp/
