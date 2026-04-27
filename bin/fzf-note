@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WORK_DIR="$APP_ROOT/work"
+NOTE_DIR="$APP_ROOT/note"
+MERGED_DIR="$WORK_DIR/merged"
+
+usage() {
+  cat <<USAGE
+fzf-note - fzf + Bash + Git note CLI
+
+Usage:
+  fzf-note init
+  fzf-note add [memo text]
+  fzf-note search
+  fzf-note merge-ai [--commit]
+
+Commands:
+  init       Create work/note directories if not present.
+  add        Append memo into work/YYYY-MM-DD.md.
+  search     Search note/*.md with fzf.
+  merge-ai   Merge work/*.md into note/YYYY-MM-DD.md using AI_MERGE_CMD.
+             --commit to auto git commit merged results.
+USAGE
+}
+
+ensure_dirs() {
+  mkdir -p "$WORK_DIR" "$NOTE_DIR" "$MERGED_DIR"
+}
+
+cmd_init() {
+  ensure_dirs
+  touch "$WORK_DIR/.gitkeep" "$NOTE_DIR/.gitkeep" "$MERGED_DIR/.gitkeep"
+  echo "Initialized: $WORK_DIR $NOTE_DIR"
+}
+
+cmd_add() {
+  ensure_dirs
+  local today file memo now
+  today="$(date +%F)"
+  now="$(date +%T)"
+  file="$WORK_DIR/$today.md"
+
+  if (($# > 0)); then
+    memo="$*"
+  else
+    read -r -p "memo> " memo
+  fi
+
+  if [[ -z "${memo// }" ]]; then
+    echo "Empty memo. nothing added."
+    exit 1
+  fi
+
+  {
+    echo "- [$now] $memo"
+  } >> "$file"
+
+  echo "Added memo to $file"
+}
+
+cmd_search() {
+  ensure_dirs
+  if ! command -v fzf >/dev/null 2>&1; then
+    echo "fzf is required for search command" >&2
+    exit 1
+  fi
+
+  local preview_cmd
+  if command -v bat >/dev/null 2>&1; then
+    preview_cmd='bat --style=plain --color=always {}'
+  else
+    preview_cmd='sed -n "1,200p" {}'
+  fi
+
+  mapfile -t files < <(find "$NOTE_DIR" -type f -name '*.md' | sort)
+  if ((${#files[@]} == 0)); then
+    echo "No markdown files found in $NOTE_DIR"
+    exit 0
+  fi
+
+  local selected
+  selected="$(printf '%s\n' "${files[@]}" | fzf --prompt='note> ' --preview "$preview_cmd")"
+
+  if [[ -n "$selected" ]]; then
+    echo "----- $selected -----"
+    cat "$selected"
+  fi
+}
+
+build_prompt_from_work() {
+  local buffer=""
+  local f
+  while IFS= read -r f; do
+    buffer+=$'\n\n'
+    buffer+="# SOURCE: $f"
+    buffer+=$'\n'
+    buffer+="$(cat "$f")"
+  done < <(find "$WORK_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+
+  cat <<PROMPT
+あなたはノート整理アシスタントです。
+次の断片メモを、重複を減らして読みやすい1つのMarkdownに統合してください。
+
+要件:
+- 日本語
+- 見出しを使って構造化
+- 箇条書き中心
+- 曖昧な点は「要確認」として残す
+
+断片メモ:
+$buffer
+PROMPT
+}
+
+cmd_merge_ai() {
+  ensure_dirs
+
+  if [[ -z "${AI_MERGE_CMD:-}" ]]; then
+    echo "AI_MERGE_CMD is not set. Example:"
+    echo "  export AI_MERGE_CMD='your_ai_cli --stdin --stdout'"
+    exit 1
+  fi
+
+  mapfile -t work_files < <(find "$WORK_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+  if ((${#work_files[@]} == 0)); then
+    echo "No work markdown files to merge"
+    exit 0
+  fi
+
+  local prompt out_file today
+  today="$(date +%F)"
+  out_file="$NOTE_DIR/$today.md"
+  prompt="$(build_prompt_from_work)"
+
+  # shellcheck disable=SC2086
+  merged_output="$(printf '%s' "$prompt" | eval "$AI_MERGE_CMD")"
+
+  if [[ -z "${merged_output// }" ]]; then
+    echo "AI output is empty; aborting"
+    exit 1
+  fi
+
+  printf '%s\n' "$merged_output" > "$out_file"
+  mkdir -p "$MERGED_DIR"
+  for f in "${work_files[@]}"; do
+    mv "$f" "$MERGED_DIR/"
+  done
+
+  echo "Merged notes written to $out_file"
+  echo "Moved source work files to $MERGED_DIR"
+
+  if [[ "${1:-}" == "--commit" ]]; then
+    if git -C "$APP_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      git -C "$APP_ROOT" add "$NOTE_DIR" "$MERGED_DIR"
+      git -C "$APP_ROOT" commit -m "chore(note): merge work notes into $today" || true
+      echo "git commit attempted"
+    else
+      echo "Not a git repository. skipped commit"
+    fi
+  fi
+}
+
+main() {
+  local cmd="${1:-}"
+  shift || true
+
+  case "$cmd" in
+    init) cmd_init "$@" ;;
+    add) cmd_add "$@" ;;
+    search) cmd_search "$@" ;;
+    merge-ai) cmd_merge_ai "$@" ;;
+    -h|--help|help|"") usage ;;
+    *)
+      echo "Unknown command: $cmd" >&2
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
