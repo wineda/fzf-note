@@ -124,19 +124,31 @@ cmd_search() {
   if [[ -n "${TMUX:-}" ]] && command -v tmux >/dev/null 2>&1; then
     local tmp_out
     tmp_out="$(mktemp)"
-    trap 'rm -f "${tmp_out:-}"' RETURN
+    local tmp_script
+    tmp_script="$(mktemp)"
+    trap 'rm -f "${tmp_out:-}" "${tmp_script:-}"' RETURN
 
-    local q_note
-    q_note=$(printf '%q' "$NOTE_FILE")
-    local q_preview
-    q_preview=$(printf '%q' "$preview")
-    local q_out
-    q_out=$(printf '%q' "$tmp_out")
+    cat > "$tmp_script" <<'SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
 
-    local q_fzf_opts
-    q_fzf_opts=$(printf '%q ' "${fzf_opts[@]}")
+note_file="$1"
+preview_cmd="$2"
+out_file="$3"
+shift 3
 
-    tmux display-popup -E "bash -lc 'nl -ba $q_note | awk -F'\''\t'\'' '\''\$2 ~ /[^[:space:]]/'\'' | fzf $q_fzf_opts --preview $q_preview > $q_out'" || true
+nl -ba "$note_file" | awk -F'\t' '$2 ~ /[^[:space:]]/' | fzf "$@" --preview "$preview_cmd" > "$out_file"
+SCRIPT
+    chmod +x "$tmp_script"
+
+    local popup_cmd
+    popup_cmd=$(printf 'bash %q %q %q %q' "$tmp_script" "$NOTE_FILE" "$preview" "$tmp_out")
+    local opt
+    for opt in "${fzf_opts[@]}"; do
+      popup_cmd+=" $(printf '%q' "$opt")"
+    done
+
+    tmux display-popup -E "$popup_cmd" || true
 
     if [[ -s "$tmp_out" ]]; then
       selection="$(cat "$tmp_out")"
