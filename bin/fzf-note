@@ -113,6 +113,12 @@ cmd_search() {
   local preview
   preview="$(preview_command "$NOTE_FILE")"
   preview="${preview//FILE_PLACEHOLDER/$NOTE_FILE}"
+  local -a fzf_opts=(
+    --ansi
+    --layout=reverse
+    --border=sharp
+    --preview-window=down,60%,border-top
+  )
 
   local selection=""
   if [[ -n "${TMUX:-}" ]] && command -v tmux >/dev/null 2>&1; then
@@ -127,13 +133,16 @@ cmd_search() {
     local q_out
     q_out=$(printf '%q' "$tmp_out")
 
-    tmux display-popup -E "bash -lc 'nl -ba $q_note | awk -F'\''\t'\'' '\''\$2 ~ /[^[:space:]]/'\'' | fzf --ansi --layout=reverse --preview-window=down,60% --preview $q_preview > $q_out'" || true
+    local q_fzf_opts
+    q_fzf_opts=$(printf '%q ' "${fzf_opts[@]}")
+
+    tmux display-popup -E "bash -lc 'nl -ba $q_note | awk -F'\''\t'\'' '\''\$2 ~ /[^[:space:]]/'\'' | fzf $q_fzf_opts --preview $q_preview > $q_out'" || true
 
     if [[ -s "$tmp_out" ]]; then
       selection="$(cat "$tmp_out")"
     fi
   else
-    selection="$({ nl -ba "$NOTE_FILE" | awk -F'\t' '$2 ~ /[^[:space:]]/' | fzf --ansi --layout=reverse --preview-window=down,60% --preview "$preview"; } || true)"
+    selection="$({ nl -ba "$NOTE_FILE" | awk -F'\t' '$2 ~ /[^[:space:]]/' | fzf "${fzf_opts[@]}" --preview "$preview"; } || true)"
   fi
 
   open_in_vim_from_selection "$selection"
