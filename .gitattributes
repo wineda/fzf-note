@@ -1,3 +1,5 @@
-# Enforce LF endings for executable scripts to keep shebangs portable.
-bin/* text eol=lf
+* text=auto
+
+# Keep executable scripts Unix-compatible
 *.sh text eol=lf
+bin/* text eol=lf
