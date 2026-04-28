@@ -140,38 +140,8 @@ cmd_search() {
   mapfile -t fzf_opts < <(build_fzf_opts)
 
   local selection=""
-  if [[ -n "${TMUX:-}" ]] && command -v tmux >/dev/null 2>&1; then
-    local tmp_out
-    tmp_out="$(mktemp)"
-    local tmp_script
-    tmp_script="$(mktemp)"
-    trap 'rm -f "${tmp_out:-}" "${tmp_script:-}"' RETURN
-
-    cat > "$tmp_script" <<'SCRIPT'
-#!/usr/bin/env bash
-set -euo pipefail
-
-note_file="$1"
-preview_cmd="$2"
-out_file="$3"
-shift 3
-
-nl -ba "$note_file" | awk -F'\t' '$2 ~ /[^[:space:]]/' | fzf "$@" --preview "$preview_cmd" > "$out_file"
-SCRIPT
-    chmod +x "$tmp_script"
-
-    local popup_cmd
-    popup_cmd=$(printf 'bash %q %q %q %q' "$tmp_script" "$NOTE_FILE" "$preview" "$tmp_out")
-    local opt
-    for opt in "${fzf_opts[@]}"; do
-      popup_cmd+=" $(printf '%q' "$opt")"
-    done
-
-    tmux display-popup -E "$popup_cmd" || true
-
-    if [[ -s "$tmp_out" ]]; then
-      selection="$(cat "$tmp_out")"
-    fi
+  if [[ -n "${TMUX:-}" ]] && command -v fzf-tmux >/dev/null 2>&1; then
+    selection="$({ nl -ba "$NOTE_FILE" | awk -F'\t' '$2 ~ /[^[:space:]]/' | fzf-tmux -p 90%,85% "${fzf_opts[@]}" --preview "$preview"; } || true)"
   else
     selection="$({ nl -ba "$NOTE_FILE" | awk -F'\t' '$2 ~ /[^[:space:]]/' | fzf "${fzf_opts[@]}" --preview "$preview"; } || true)"
   fi
