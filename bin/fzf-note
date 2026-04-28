@@ -2,9 +2,10 @@
 set -euo pipefail
 
 APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WORK_DIR="${FZF_NOTE_WORK_DIR:-$APP_ROOT/work}"
-MERGED_DIR="$WORK_DIR/merged"
-NOTE_DIR="${FZF_NOTE_NOTE_DIR:-$APP_ROOT/note}"
+DOC_DIR="${FZF_NOTE_DOC_DIR:-$APP_ROOT/document}"
+WORK_DIR="${FZF_NOTE_WORK_DIR:-$DOC_DIR/work}"
+MERGED_DIR="${FZF_NOTE_MERGE_DIR:-$DOC_DIR/merge}"
+NOTE_DIR="${FZF_NOTE_NOTE_DIR:-$DOC_DIR/note}"
 NOTE_FILE="${FZF_NOTE_NOTE_FILE:-$NOTE_DIR/note.md}"
 PROMPTS_DIR="$APP_ROOT/prompts"
 FORMAT_PROMPT_FILE="$PROMPTS_DIR/format.md"
@@ -28,7 +29,7 @@ require_cmds() {
 }
 
 init_repo() {
-  mkdir -p "$WORK_DIR" "$MERGED_DIR" "$NOTE_DIR" "$PROMPTS_DIR"
+  mkdir -p "$DOC_DIR" "$WORK_DIR" "$MERGED_DIR" "$NOTE_DIR" "$PROMPTS_DIR"
   touch "$NOTE_FILE"
 
   if [[ ! -f "$FORMAT_PROMPT_FILE" ]]; then
@@ -70,7 +71,7 @@ PROMPT
 PROMPT
   fi
 
-  log "initialized: work/, work/merged/, note/, note/note.md"
+  log "initialized: document/work, document/merge, document/note, document/note/note.md"
 }
 
 today_work_file() {
@@ -167,6 +168,7 @@ cmd_merge() {
   fi
 
   mkdir -p "$NOTE_DIR"
+  mkdir -p "$MERGED_DIR"
   touch "$NOTE_FILE"
 
   local f
@@ -178,7 +180,7 @@ cmd_merge() {
     mv "$f" "$MERGED_DIR/"
   done
 
-  log "appended ${#work_files[@]} files into note/note.md and moved to work/merged/"
+  log "appended ${#work_files[@]} files into document/note/note.md and moved to document/merge/"
 }
 
 cmd_backup() {
@@ -223,12 +225,12 @@ usage() {
 Usage: ./bin/fzf-note <command>
 
 Commands:
-  init        Initialize required directories and files
-  add         Open today's work/YYYY-MM-DD.md in $FZF_NOTE_EDITOR (default: vim)
-  search      Search note/note.md by line with fzf and open selection in $FZF_NOTE_EDITOR
-  merge       Append all work/*.md to the end of note/note.md
+  init        Initialize required directories and files under document/
+  add         Open today's document/work/YYYY-MM-DD.md in $FZF_NOTE_EDITOR (default: vim)
+  search      Search document/note/note.md by line with fzf and open selection in $FZF_NOTE_EDITOR
+  merge       Append all document/work/*.md to the end of document/note/note.md
   backup      Archive current directory to $FZF_NOTE_BACKUP_DIR/yyyymmdd-hhmmss.tar.gz
-  format-ai   Format note/note.md by AI_FORMAT_CMD (manual)
+  format-ai   Format document/note/note.md by AI_FORMAT_CMD (manual)
 USAGE
 }
 
