@@ -4,9 +4,9 @@
 
 `fzf-note` は、`Bash + fzf + Markdown` で動くシンプルなノート管理 CLI アプリです。
 
-日々の未整理メモを `work/YYYY-MM-DD.md` に書きため、`./bin/fzf-note merge` で `note/note.md` の末尾に単純追記します。必要なときだけ `./bin/fzf-note format-ai` で `note/note.md` 全体を AI 整形できます。
+日々の未整理メモを `document/work/YYYY-MM-DD.md` に書きため、`./bin/fzf-note merge` で `document/note/note.md` の末尾に単純追記します。追記済みファイルは `document/merge/` へ移動します。必要なときだけ `./bin/fzf-note format-ai` で `document/note/note.md` 全体を AI 整形できます。
 
-`work/` と `note/` はデフォルトでこのリポジトリ配下を使いますが、環境変数で別リポジトリへ切り出せます（後述）。
+`document/` はデフォルトでこのリポジトリ配下を使いますが、環境変数で任意の Git リポジトリへ切り出せます（後述）。
 
 ## コマンド
 
@@ -20,10 +20,11 @@
 
 作成対象:
 
-- `work/`
-- `work/merged/`
-- `note/`
-- `note/note.md`
+- `document/`
+- `document/work/`
+- `document/merge/`
+- `document/note/`
+- `document/note/note.md`
 - `prompts/format.md`
 - `prompts/organize-fast.md`
 
@@ -37,7 +38,7 @@
 
 ### `search`
 
-`note/note.md` の各行を `fzf` で検索し、選択行を `エディタ +行番号 note/note.md` で開きます。
+`document/note/note.md` の各行を `fzf` で検索し、選択行を `エディタ +行番号 document/note/note.md` で開きます。
 
 ```bash
 ./bin/fzf-note search
@@ -45,7 +46,7 @@
 
 ### `merge`
 
-`work/*.md` を `note/note.md` の末尾へ単純に追記し、追記済みファイルを `work/merged/` に移動します。
+`document/work/*.md` を `document/note/note.md` の末尾へ単純に追記し、追記済みファイルを `document/merge/` に移動します。
 
 ```bash
 ./bin/fzf-note merge
@@ -65,8 +66,10 @@ export FZF_NOTE_BACKUP_DIR=/path/to/backups
 ## 環境変数
 
 - `FZF_NOTE_EDITOR`: `add` / `search` で使うエディタコマンド（デフォルト: `vim`）
-- `FZF_NOTE_WORK_DIR`: `work` ディレクトリの配置先（デフォルト: `<repo>/work`）
-- `FZF_NOTE_NOTE_DIR`: `note` ディレクトリの配置先（デフォルト: `<repo>/note`）
+- `FZF_NOTE_DOC_DIR`: `document` ディレクトリの配置先（デフォルト: `<repo>/document`）
+- `FZF_NOTE_WORK_DIR`: `work` ディレクトリの配置先（デフォルト: `$FZF_NOTE_DOC_DIR/work`）
+- `FZF_NOTE_MERGE_DIR`: `merge` ディレクトリの配置先（デフォルト: `$FZF_NOTE_DOC_DIR/merge`）
+- `FZF_NOTE_NOTE_DIR`: `note` ディレクトリの配置先（デフォルト: `$FZF_NOTE_DOC_DIR/note`）
 - `FZF_NOTE_NOTE_FILE`: 統合ノートファイルのパス（デフォルト: `$FZF_NOTE_NOTE_DIR/note.md`）
 - `FZF_NOTE_BACKUP_DIR`: `backup` コマンドの保存先ディレクトリ
 - `AI_FORMAT_CMD`: `format-ai` で使う外部 AI CLI コマンド
@@ -75,20 +78,18 @@ export FZF_NOTE_BACKUP_DIR=/path/to/backups
 
 ```bash
 export FZF_NOTE_EDITOR=nvim
-export FZF_NOTE_WORK_DIR="$HOME/repos/fzf-note-work/work"
-export FZF_NOTE_NOTE_DIR="$HOME/repos/fzf-note-note/note"
+export FZF_NOTE_DOC_DIR="$HOME/repos/fzf-note-doc/document"
 ./bin/fzf-note add
 ```
 
-## `work/` と `note/` を別 Git リポジトリで管理する構成例
+## `document/` を別 Git リポジトリで管理する構成例
 
-`fzf-note` 本体（このリポジトリ）とは別に、データ用リポジトリを 2 つ用意します。
+`fzf-note` 本体（このリポジトリ）とは別に、データ用リポジトリを 1 つ用意します。
 
 ```text
 ~/repos/
-  fzf-note/        # アプリ本体
-  fzf-note-work/   # 作業メモ (work/)
-  fzf-note-note/   # 統合ノート (note/)
+  fzf-note/       # アプリ本体
+  fzf-note-doc/   # ドキュメントデータ (document/)
 ```
 
 セットアップ例:
@@ -97,29 +98,28 @@ export FZF_NOTE_NOTE_DIR="$HOME/repos/fzf-note-note/note"
 mkdir -p ~/repos
 cd ~/repos
 git clone <app-repo> fzf-note
-git clone <work-repo> fzf-note-work
-git clone <note-repo> fzf-note-note
+git clone <doc-repo> fzf-note-doc
 
-mkdir -p ~/repos/fzf-note-work/work
-mkdir -p ~/repos/fzf-note-note/note
-touch ~/repos/fzf-note-note/note/note.md
+mkdir -p ~/repos/fzf-note-doc/document/work
+mkdir -p ~/repos/fzf-note-doc/document/merge
+mkdir -p ~/repos/fzf-note-doc/document/note
+touch ~/repos/fzf-note-doc/document/note/note.md
 
 cat >> ~/.bashrc <<'EOF'
 export FZF_NOTE_EDITOR=nvim
-export FZF_NOTE_WORK_DIR="$HOME/repos/fzf-note-work/work"
-export FZF_NOTE_NOTE_DIR="$HOME/repos/fzf-note-note/note"
+export FZF_NOTE_DOC_DIR="$HOME/repos/fzf-note-doc/document"
 EOF
 ```
 
 この構成にすると:
 
-- `add` は `fzf-note-work` 側に日次メモを作成
-- `merge` は `fzf-note-note` 側の `note.md` に追記
-- `work` と `note` を用途別に独立してコミット／バックアップ可能
+- `add` は `fzf-note-doc` 側の `document/work` に日次メモを作成
+- `merge` は `document/note/note.md` に追記し、元ファイルを `document/merge` に移動
+- `document` 全体をデータ専用リポジトリとしてコミット／バックアップ可能
 
 ### `format-ai`
 
-`note/note.md` 全体を AI で整形します（手動実行）。
+`document/note/note.md` 全体を AI で整形します（手動実行）。
 
 ```bash
 export AI_FORMAT_CMD='your_ai_cli --stdin --stdout'
