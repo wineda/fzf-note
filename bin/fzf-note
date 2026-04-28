@@ -181,6 +181,32 @@ cmd_merge() {
   done
 
   log "appended ${#work_files[@]} files into document/note/note.md and moved to document/merge/"
+
+  if git -C "$DOC_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    local -a merged_names=()
+    local name
+    for f in "${work_files[@]}"; do
+      name="$(basename "$f")"
+      merged_names+=("$name")
+    done
+
+    local commit_msg
+    if ((${#merged_names[@]} == 1)); then
+      commit_msg="note.mdに${merged_names[0]}をマージ"
+    else
+      commit_msg="note.mdに${merged_names[0]}ほか$((${#merged_names[@]} - 1))件をマージ"
+    fi
+
+    git -C "$DOC_DIR" add -A
+    if git -C "$DOC_DIR" diff --cached --quiet; then
+      log "no changes to commit in $DOC_DIR"
+      return 0
+    fi
+    git -C "$DOC_DIR" commit -m "$commit_msg"
+    log "committed in $DOC_DIR: $commit_msg"
+  else
+    log "skip commit: $DOC_DIR is not a git repository"
+  fi
 }
 
 cmd_backup() {

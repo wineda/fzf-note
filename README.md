@@ -46,7 +46,13 @@
 
 ### `merge`
 
-`document/work/*.md` を `document/note/note.md` の末尾へ単純に追記し、追記済みファイルを `document/merge/` に移動します。
+`document/work/*.md` を `document/note/note.md` の末尾へ単純に追記し、追記済みファイルを `document/merge/` に移動します。  
+`document/` が Git リポジトリなら、`git add -A && git commit` を自動実行します。
+
+コミットメッセージ例:
+
+- 1 ファイル: `note.mdに2026-04-28.mdをマージ`
+- 複数ファイル: `note.mdに2026-04-28.mdほか2件をマージ`
 
 ```bash
 ./bin/fzf-note merge
