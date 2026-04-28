@@ -116,8 +116,8 @@ cmd_search() {
   local -a fzf_opts=(
     --ansi
     --layout=reverse
-    --border=sharp
-    --preview-window=down,60%,border-top
+    --border
+    --preview-window=down,60%
   )
 
   local selection=""
