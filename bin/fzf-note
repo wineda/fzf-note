@@ -84,13 +84,13 @@ preview_command() {
   local file="$1"
   if command -v bat >/dev/null 2>&1; then
     cat <<'CMD'
-line=$(printf '%s\n' "{}" | awk '{print $1}');
+line='{1}';
 [[ "$line" =~ ^[0-9]+$ ]] || line=1
 bat --style=numbers --color=always --paging=never --highlight-line "$line" --line-range "$((line>20?line-20:1)):$((line+20))" "FILE_PLACEHOLDER"
 CMD
   else
     cat <<'CMD'
-line=$(printf '%s\n' "{}" | awk '{print $1}');
+line='{1}';
 [[ "$line" =~ ^[0-9]+$ ]] || line=1
 start=$((line>20?line-20:1)); end=$((line+20));
 awk -v s="$start" -v e="$end" -v line="$line" 'NR>=s&&NR<=e {prefix=(NR==line?"> ":"  "); printf "%s%5d | %s\n", prefix, NR, $0}' "FILE_PLACEHOLDER"
