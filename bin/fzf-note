@@ -2,13 +2,14 @@
 set -euo pipefail
 
 APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WORK_DIR="$APP_ROOT/work"
+WORK_DIR="${FZF_NOTE_WORK_DIR:-$APP_ROOT/work}"
 MERGED_DIR="$WORK_DIR/merged"
-NOTE_DIR="$APP_ROOT/note"
-NOTE_FILE="$NOTE_DIR/note.md"
+NOTE_DIR="${FZF_NOTE_NOTE_DIR:-$APP_ROOT/note}"
+NOTE_FILE="${FZF_NOTE_NOTE_FILE:-$NOTE_DIR/note.md}"
 PROMPTS_DIR="$APP_ROOT/prompts"
 FORMAT_PROMPT_FILE="$PROMPTS_DIR/format.md"
 ORGANIZE_FAST_PROMPT_FILE="$PROMPTS_DIR/organize-fast.md"
+NOTE_EDITOR="${FZF_NOTE_EDITOR:-vim}"
 
 log() {
   printf '[fzf-note] %s\n' "$*" >&2
@@ -81,7 +82,7 @@ cmd_add() {
   local f
   f="$(today_work_file)"
   touch "$f"
-  vim "$f"
+  "$NOTE_EDITOR" "$f"
 }
 
 preview_command() {
@@ -131,7 +132,7 @@ open_in_vim_from_selection() {
   local line
   line="$(awk '{print $1}' <<<"$selection")"
   [[ "$line" =~ ^[0-9]+$ ]] || die "invalid selection: $selection"
-  vim "+${line}" "$NOTE_FILE"
+  "$NOTE_EDITOR" "+${line}" "$NOTE_FILE"
 }
 
 cmd_search() {
@@ -223,8 +224,8 @@ Usage: ./bin/fzf-note <command>
 
 Commands:
   init        Initialize required directories and files
-  add         Open today's work/YYYY-MM-DD.md in vim
-  search      Search note/note.md by line with fzf and open selection in vim
+  add         Open today's work/YYYY-MM-DD.md in $FZF_NOTE_EDITOR (default: vim)
+  search      Search note/note.md by line with fzf and open selection in $FZF_NOTE_EDITOR
   merge       Append all work/*.md to the end of note/note.md
   backup      Archive current directory to $FZF_NOTE_BACKUP_DIR/yyyymmdd-hhmmss.tar.gz
   format-ai   Format note/note.md by AI_FORMAT_CMD (manual)
@@ -241,11 +242,11 @@ main() {
       init_repo
       ;;
     add)
-      require_cmds bash vim
+      require_cmds bash "$NOTE_EDITOR"
       cmd_add "$@"
       ;;
     search)
-      require_cmds bash fzf vim
+      require_cmds bash fzf "$NOTE_EDITOR"
       cmd_search "$@"
       ;;
     merge)
