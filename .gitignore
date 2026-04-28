@@ -4,3 +4,7 @@
 
 # optional runtime tmp
 .tmp/
+
+# generated markdown notes
+work/*.md
+note/*.md
