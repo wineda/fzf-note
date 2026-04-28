@@ -9,3 +9,7 @@
 work/*.md
 work/merged/*.md
 note/*.md
+
+# documentation
+docs/
+document/
