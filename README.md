@@ -23,6 +23,7 @@
 - `note/`
 - `note/note.md`
 - `prompts/format.md`
+- `prompts/organize-fast.md`
 
 ### `add`
 
@@ -42,11 +43,22 @@
 
 ### `merge`
 
-`work/*.md` を `note/note.md` の末尾へ単純に追記します。
+`work/*.md` を `note/note.md` の末尾へ単純に追記し、追記済みファイルを `work/merged/` に移動します。
 
 ```bash
 ./bin/fzf-note merge
 ```
+
+### `backup`
+
+カレントディレクトリを `yyyymmdd-hhmmss.tar.gz` 形式でバックアップします。
+
+```bash
+export FZF_NOTE_BACKUP_DIR=/path/to/backups
+./bin/fzf-note backup
+```
+
+保存先は環境変数 `FZF_NOTE_BACKUP_DIR` で指定します。
 
 ### `format-ai`
 
@@ -58,6 +70,8 @@ export AI_FORMAT_CMD='your_ai_cli --stdin --stdout'
 ```
 
 `AI_FORMAT_CMD` は、標準入力でプロンプトを受け取り、標準出力で整形後 Markdown 全文を返すコマンドです。
+
+`prompts/organize-fast.md` は、`note.md` 全文をプロンプトに与える際に、内容整理を高速化するための専用プロンプトです。
 
 ## 必須要件
 

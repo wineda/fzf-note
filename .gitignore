@@ -7,4 +7,5 @@
 
 # generated markdown notes
 work/*.md
+work/merged/*.md
 note/*.md

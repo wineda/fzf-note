@@ -8,6 +8,7 @@ NOTE_DIR="$APP_ROOT/note"
 NOTE_FILE="$NOTE_DIR/note.md"
 PROMPTS_DIR="$APP_ROOT/prompts"
 FORMAT_PROMPT_FILE="$PROMPTS_DIR/format.md"
+ORGANIZE_FAST_PROMPT_FILE="$PROMPTS_DIR/organize-fast.md"
 
 log() {
   printf '[fzf-note] %s\n' "$*" >&2
@@ -41,6 +42,30 @@ init_repo() {
 - H2 (##) 見出し単位で読みやすく整理する
 - 重複や冗長表現は整理する
 - 曖昧・未確定の内容は「要確認」として残す
+PROMPT
+  fi
+
+  if [[ ! -f "$ORGANIZE_FAST_PROMPT_FILE" ]]; then
+    cat > "$ORGANIZE_FAST_PROMPT_FILE" <<'PROMPT'
+あなたは「大量ノート整理」専任アシスタントです。
+
+入力される note.md 全文を、短時間で再利用しやすい構造に再編してください。
+
+必須ルール:
+- 出力は Markdown 本文のみ（前置き・説明禁止）
+- 元情報は削除しない（不足情報は「要確認」で明示）
+- まず全体を俯瞰し、内容を H2 (##) 見出しで再分類する
+- 同種内容は統合し、重複は 1 つに集約する
+- 実行可能な内容は「次アクション」に分離する
+- 決定事項 / 未決事項 / 参照情報 を明確に分ける
+- 長文は要点化し、箇条書き中心で可読性を優先する
+
+推奨構成:
+## サマリ
+## 決定事項
+## 未決事項（要確認）
+## 次アクション
+## 参照メモ
 PROMPT
   fi
 
@@ -149,9 +174,22 @@ cmd_merge() {
       printf '\n\n'
       cat "$f"
     } >> "$NOTE_FILE"
+    mv "$f" "$MERGED_DIR/"
   done
 
-  log "appended ${#work_files[@]} files into note/note.md"
+  log "appended ${#work_files[@]} files into note/note.md and moved to work/merged/"
+}
+
+cmd_backup() {
+  [[ -n "${FZF_NOTE_BACKUP_DIR:-}" ]] || die "FZF_NOTE_BACKUP_DIR is not set"
+  mkdir -p "$FZF_NOTE_BACKUP_DIR"
+
+  local ts archive_path
+  ts="$(date +'%Y%m%d-%H%M%S')"
+  archive_path="$FZF_NOTE_BACKUP_DIR/$ts.tar.gz"
+
+  tar -czf "$archive_path" -C "$(pwd)" .
+  log "created backup: $archive_path"
 }
 
 cmd_format_ai() {
@@ -188,6 +226,7 @@ Commands:
   add         Open today's work/YYYY-MM-DD.md in vim
   search      Search note/note.md by line with fzf and open selection in vim
   merge       Append all work/*.md to the end of note/note.md
+  backup      Archive current directory to $FZF_NOTE_BACKUP_DIR/yyyymmdd-hhmmss.tar.gz
   format-ai   Format note/note.md by AI_FORMAT_CMD (manual)
 USAGE
 }
@@ -212,6 +251,10 @@ main() {
     merge)
       require_cmds bash
       cmd_merge "$@"
+      ;;
+    backup)
+      require_cmds bash tar
+      cmd_backup "$@"
       ;;
     format-ai)
       require_cmds bash
