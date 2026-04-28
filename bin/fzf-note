@@ -98,6 +98,29 @@ CMD
   fi
 }
 
+build_fzf_opts() {
+  local help_text
+  help_text="$(fzf --help 2>&1 || true)"
+
+  local -a opts=(
+    --ansi
+    --layout=reverse
+    --preview-window=down,60%
+  )
+
+  if [[ "$help_text" == *"sharp"* ]]; then
+    opts+=(--border=sharp)
+  else
+    opts+=(--border)
+  fi
+
+  if [[ "$help_text" == *"border-"* ]]; then
+    opts[2]="--preview-window=down,60%,border-top"
+  fi
+
+  printf '%s\n' "${opts[@]}"
+}
+
 open_in_vim_from_selection() {
   local selection="$1"
   [[ -z "$selection" ]] && return 0
@@ -113,12 +136,8 @@ cmd_search() {
   local preview
   preview="$(preview_command "$NOTE_FILE")"
   preview="${preview//FILE_PLACEHOLDER/$NOTE_FILE}"
-  local -a fzf_opts=(
-    --ansi
-    --layout=reverse
-    --border
-    --preview-window=down,60%
-  )
+  local -a fzf_opts=()
+  mapfile -t fzf_opts < <(build_fzf_opts)
 
   local selection=""
   if [[ -n "${TMUX:-}" ]] && command -v fzf-tmux >/dev/null 2>&1; then
